@@ -170,10 +170,13 @@ std::pair<MatrixXX, VectorX> computeCostFunction(point_t_tC p0, point_t_tC l0, c
   Ref_vectorX g = res.second;
 
   // minimize distance to initial point
-  double weightDist = useAngMomentum ? 0.0001 : 1.;
+  double weightDist = useAngMomentum ? 0.1 : 1.;
+  Vector3 weightDist_vector(Vector3::Ones() * weightDist) ;
+  weightDist_vector[2] = 1e4; // increase weight for the z com position
   H.block<3, 3>(0, 0) = Matrix3::Identity() * weightDist;
-  g.head(3) = -p0 * weightDist;
-
+  H(2,2) = weightDist_vector[2];
+  g.head(3) = (-p0).cwiseProduct(weightDist_vector);
+  //g.head(3) = -p0 * weightDist;
   // now angular momentum integral minimization
   if (useAngMomentum) {
     H.block<3, 3>(3, 3) = Matrix3::Identity() * 6. / 5.;
@@ -227,6 +230,7 @@ ResultDataCOMTraj solve0step(const ProblemData& pData, const std::vector<double>
   init.head(3) = pData.c0_;
   if (dimPb > 3) init.tail(3) = pData.l0_;
   // rewriting 0.5 || Dx -d ||^2 as x'Hx  + g'x
+  //std::cout<<"Cost matrix : \n "<<Hg.first<<" \n Vector : \n"<<Hg.second<<std::endl;
   ResultData resQp = solve(Ab, Hg, init);
   if (resQp.success_) {
     res.success_ = true;
